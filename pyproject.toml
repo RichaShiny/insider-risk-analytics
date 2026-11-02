@@ -1,0 +1,6 @@
+[project]
+name = "insider-risk-analytics"
+version = "0.1.0"
+description = "Live activity ingestion and explainable insider-risk triage"
+requires-python = ">=3.10"
+dependencies = []
