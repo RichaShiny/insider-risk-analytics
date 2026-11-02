@@ -38,6 +38,8 @@ def connect(path):
 
 
 def normalize(raw):
+    if not isinstance(raw, dict):
+        raise ValueError('event must be a JSON object')
     required = ('id', 'source', 'actor', 'timestamp', 'kind')
     if any(not isinstance(raw.get(k), str) or not raw[k].strip() for k in required):
         raise ValueError('nonempty string fields required: ' + ', '.join(required))
@@ -126,6 +128,22 @@ def report(db, path):
     <h1>InsiderLens · Activity triage</h1><p>Public GitHub activity is a delayed, incomplete ingestion demo. It is never scored as insider risk. Alerts from supplied organizational telemetry are review leads, not findings of misconduct. Scores are rule priorities, not probabilities.</p>
     <h2>Source freshness</h2><table><tr><th>Source</th><th>Events</th><th>Newest event (UTC)</th><th>Latest receipt (UTC)</th></tr>'''+table(summary)+'''</table>
     <h2>Investigation queue</h2><table><tr><th>Source</th><th>Actor</th><th>Event time</th><th>Kind</th><th>Priority</th><th>Evidence</th></tr>'''+table(rows)+'''</table><p>No alerts may mean insufficient history or no triggering events. It does not establish safety.</p></html>'''
+    # Optional research tables are discovered without requiring the import module.
+    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    extra = '<h2>Event mix</h2><table><tr><th>Source</th><th>Kind</th><th>Count</th></tr>'
+    extra += table(db.execute('SELECT source,kind,count(*) FROM events GROUP BY source,kind ORDER BY count(*) DESC LIMIT 30').fetchall())+'</table>'
+    if 'provenance' in tables:
+        labels = {}
+        for source,metadata in db.execute('SELECT source,metadata FROM provenance'):
+            meta = json.loads(metadata)
+            key = (source,meta.get('label_binary','unknown'),meta.get('actor_type','unknown'))
+            labels[key] = labels.get(key,0)+1
+        extra += '<h2>Research sample composition</h2><p>Archived SOC records, not a current threat feed. Labels are automated correlation outputs, not independently verified incidents. Timestamps represent platform ingestion or lead observation, not necessarily device event time.</p><table><tr><th>Source</th><th>Source label</th><th>Entity type</th><th>Count</th></tr>'
+        extra += table([(*k,v) for k,v in sorted(labels.items())])+'</table>'
+    if 'reviews' in tables:
+        extra += '<h2>Review history</h2><table><tr><th>Source</th><th>Event</th><th>Disposition</th><th>Note</th><th>Reviewed</th></tr>'
+        extra += table(db.execute('SELECT source,event_id,disposition,note,reviewed_at FROM reviews ORDER BY review_id DESC LIMIT 100').fetchall())+'</table>'
+    document = document.replace('</html>',extra+'</html>')
     Path(path).write_text(document,encoding='utf-8')
 
 

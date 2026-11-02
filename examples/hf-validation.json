@@ -1,0 +1,53 @@
+{
+  "note": "Local smoke test of bounded historical samples. No raw records included. Labels are automated, not independently verified. Zero recall exposes limited coverage of the authentication-focused rules on network incident leads.",
+  "imports": [
+    {
+      "dataset": "witfoo/precinct6-cybersecurity-100m",
+      "config": "signals",
+      "revision_observed": "ef20229d046b03c02061c396cd66b711745021ae",
+      "offset": 0,
+      "requested": 500,
+      "downloaded": 500,
+      "inserted": 500,
+      "rejected": 0,
+      "payload_sha256": "3054e4d726fcdc53a6cf48a085fc60b3b8ffa13941b84c226383833a5db5621b",
+      "fetched_at": "2026-11-02T02:18:54.974501+00:00"
+    },
+    {
+      "dataset": "witfoo/precinct6-cybersecurity-100m",
+      "config": "incident_signals",
+      "revision_observed": "ef20229d046b03c02061c396cd66b711745021ae",
+      "offset": 0,
+      "requested": 500,
+      "downloaded": 500,
+      "inserted": 500,
+      "rejected": 0,
+      "payload_sha256": "a1e9b2646ddd0b0d0a8fe95275d9c6558981b47f9b6ea6a3b58e76c08b40e78b",
+      "fetched_at": "2026-11-02T02:19:17.575983+00:00"
+    }
+  ],
+  "agreement": {
+    "hf-witfoo:ef20229d046b03c02061c396cd66b711745021ae:signals": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 498,
+      "fn": 0,
+      "excluded": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "warning": "Agreement with automated labels on bounded nonrandom samples, not independent ground truth or population performance."
+    },
+    "hf-witfoo:ef20229d046b03c02061c396cd66b711745021ae:incident_signals": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 0,
+      "fn": 500,
+      "excluded": 0,
+      "precision": null,
+      "recall": 0.0,
+      "false_positive_rate": null,
+      "warning": "Agreement with automated labels on bounded nonrandom samples, not independent ground truth or population performance."
+    }
+  }
+}

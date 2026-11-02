@@ -75,3 +75,52 @@ Tests cover duplicate handling, behavioral spikes, temporal leakage, public-sour
 This local portfolio tool has no authentication, encryption layer, RBAC, retention scheduler, or analyst disposition store. Keep organizational data in an approved environment, restrict filesystem access, and apply organizational retention and access policies before supplying sensitive data. Generated databases and reports are ignored by Git. Do not publish employee telemetry or reports to this public repository. Alerts require human review with business context.
 
 Next steps: authorized SIEM connectors, retention and deletion controls, replay evaluation on labeled data, peer baselines, audit logs, and analyst feedback. This version intentionally uses inspectable rules rather than presenting an unvalidated ML model as a security control.
+
+## Hugging Face security data and analyst features
+
+Import bounded samples directly from **WitFoo's original dataset**, rather than an unverified mirror:
+
+```bash
+python security_data.py import-hf --config signals --limit 500
+python security_data.py import-hf --config incident_signals --limit 500
+python security_data.py imports
+python security_data.py evaluate
+python insiderlens.py report
+python security_data.py export --output queue.csv
+```
+
+Dataset: https://huggingface.co/datasets/witfoo/precinct6-cybersecurity-100m
+
+Attribution: WitFoo, Inc. (2026), *WitFoo Precinct6 Cybersecurity Dataset (large)*, v2.1.0, Apache-2.0. Data remains in your local database; raw records are not committed to this repository. The project's MIT license does not replace the dataset's Apache-2.0 terms.
+
+The publisher describes sanitized production SOC data. `signals` is an archived 2024 capture, while `incident_signals` contains historical incident leads. These are **real-source historical research records**, not real-time employee monitoring and not a validated insider-threat benchmark. CERT datasets were considered but are synthetic and are not substituted here.
+
+### Import controls and provenance
+
+- Select `--offset` and `--limit` (1 to 10,000) for bounded pagination without downloading the 100M+ corpus.
+- Each import stores dataset ID, observed repository revision, config, offset, fetched time, row counts, rejection count, and a SHA-256 digest of downloaded records.
+- The viewer API serves current data, not revision-pinned snapshots. Revision checks before and after the download detect changes to the source repository, but cannot guarantee the viewer cache is at that revision. The digest identifies the received payload. Exact snapshot replay would require an archived payload or revision-pinned Parquet download, neither is claimed here.
+- Imports reject partial/truncated viewer responses and retry transient network failures. Stable artifact IDs deduplicate repeat imports. A different dataset revision gets a separate source namespace.
+- Missing account identifiers fall back to an explicitly typed host or unresolved-event identity. Organization namespaces prevent unrelated accounts from being merged.
+- Timestamp preserves the dataset's `timestamp` field, which may be platform ingest time or lead-observation time, not device event time. `timestamp_source` and `event_time` are retained in provenance.
+- Labels, suspicion scores, incident statuses, and ATT&CK mappings are never detection inputs. ATT&CK mappings remain research metadata.
+
+### Investigation and review
+
+Find an actor in the report or SQLite event table, then inspect its chronological history:
+
+```bash
+python security_data.py timeline 'ORG-0001/account:USER-0001'
+# Replace source and event ID below with an actual alert's values:
+python security_data.py review SOURCE EVENT_ID needs-investigation 'Checking access context'
+python security_data.py review SOURCE EVENT_ID benign 'Approved activity confirmed'
+python insiderlens.py report
+```
+
+Reviews append to history, so a later disposition does not erase the earlier one. This is a local analyst convenience, not a tamper-proof audit system. CSV exports escape common spreadsheet formula prefixes. The HTML report now includes event mix, sample label composition, entity types, and review history.
+
+### Evaluation limits
+
+`evaluate` reports a confusion matrix, precision, recall, and false-positive rate **against the source's automated labels**, separately for each revision/config. Suspicious or unknown labels are excluded, and undefined metrics are `null`. These are descriptive agreement statistics for the loaded sample. The incident-lead subset is positive-only and cannot estimate a false-positive rate. Contiguous bounded samples are not representative of the full dataset.
+
+No supervised model is trained, so no held-out predictive performance is claimed. The detector remains deliberately simple: raw authentication failure types map to review leads, while per-event volume is 1 because this dataset does not provide compatible transfer volume. The existing volume-spike rule remains useful for authorized JSONL sources with actual volume measurements. Low recall on historical incident labels is expected and should guide future detector work rather than be hidden.
